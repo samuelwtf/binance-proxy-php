@@ -2,6 +2,9 @@
 
 header("Content-Type: application/json");
 
+$incoming = getallheaders();
+file_put_contents("headers_log.txt", print_r($incoming, true));
+
 // Read JSON body
 $input = file_get_contents("php://input");
 
