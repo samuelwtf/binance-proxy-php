@@ -2,7 +2,7 @@
 
 header("Content-Type: application/json");
 
-// Read the incoming POST JSON
+// Read JSON body
 $input = file_get_contents("php://input");
 
 if (!$input) {
@@ -10,21 +10,27 @@ if (!$input) {
     exit;
 }
 
-// Binance API endpoint
-$binanceUrl = "https://bpay.binanceapi.com/binancepay/openapi/v2/order";
+// Read ALL incoming headers (Render-friendly)
+$incoming = getallheaders();
 
-// Forward required headers from WHMCS to Binance
+$timestamp  = $incoming["BinancePay-Timestamp"]      ?? "";
+$nonce      = $incoming["BinancePay-Nonce"]          ?? "";
+$cert       = $incoming["BinancePay-Certificate-SN"] ?? "";
+$signature  = $incoming["BinancePay-Signature"]      ?? "";
+
+// Forward headers to Binance
 $headers = [
     "Content-Type: application/json",
-    "BinancePay-Timestamp: " . ($_SERVER["HTTP_BINANCEPAY_TIMESTAMP"] ?? ""),
-    "BinancePay-Nonce: " . ($_SERVER["HTTP_BINANCEPAY_NONCE"] ?? ""),
-    "BinancePay-Certificate-SN: " . ($_SERVER["HTTP_BINANCEPAY_CERTIFICATE_SN"] ?? ""),
-    "BinancePay-Signature: " . ($_SERVER["HTTP_BINANCEPAY_SIGNATURE"] ?? "")
+    "BinancePay-Timestamp: $timestamp",
+    "BinancePay-Nonce: $nonce",
+    "BinancePay-Certificate-SN: $cert",
+    "BinancePay-Signature: $signature"
 ];
 
-// Initialize curl
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $binanceUrl);
+// DEBUG (optional)
+// file_put_contents("debug.txt", print_r($incoming, true));
+
+$ch = curl_init("https://bpay.binanceapi.com/binancepay/openapi/v2/order");
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, $input);
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -34,7 +40,6 @@ $response = curl_exec($ch);
 $error = curl_error($ch);
 curl_close($ch);
 
-// Error handling
 if ($error) {
     echo json_encode(["curl_error" => $error]);
     exit;
